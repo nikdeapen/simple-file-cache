@@ -1,9 +1,8 @@
 use std::fmt::Display;
-use std::io::ErrorKind::Other;
 
 use enc::hex::HexEncoder;
 use enc::StringEncoder;
-use file_storage::{FilePath, FolderPath};
+use file_storage::{Error, FilePath, FolderPath};
 use sha2::digest::{DynDigest, Update};
 use sha2::Sha256;
 
@@ -36,7 +35,7 @@ impl SimpleFileCache {
     //! File Names
 
     /// Gets the file path for the key.
-    pub fn file_path<K>(&self, key: K) -> Result<FilePath, std::io::Error>
+    pub fn file_path<K>(&self, key: K) -> FilePath
     where
         K: Display,
     {
@@ -45,17 +44,42 @@ impl SimpleFileCache {
         let mut hasher: Sha256 = Sha256::default();
         Update::update(&mut hasher, key.as_bytes());
         let hash: Box<[u8]> = Box::new(hasher).finalize();
-        let hash: String = HexEncoder::LOWER
-            .encode_as_string(hash.as_ref())
-            .map_err(|error| std::io::Error::new(Other, error))?;
+        let hash: String = HexEncoder::LOWER.encode_as_string(hash.as_ref()).unwrap();
         let extension: String = format!("{}/{}.cache", &hash[..4], &hash[4..]);
         let file_path: FilePath = self
             .cache_folder
             .path()
             .clone_append(extension)
             .to_file()
-            .ok_or_else(|| std::io::Error::new(Other, "path not a file"))?;
-        Ok(file_path)
+            .unwrap();
+        file_path
+    }
+}
+
+impl SimpleFileCache {
+    //! Put
+
+    /// Puts the data into the cache.
+    pub fn put<K, D>(&self, key: K, data: D) -> Result<(), Error>
+    where
+        K: Display,
+        D: AsRef<[u8]>,
+    {
+        let file: FilePath = self.file_path(key);
+        file.delete_if_exists()?;
+        file.write_data(data)
+    }
+}
+
+impl SimpleFileCache {
+    //! Get
+
+    /// Gets the data in the cache.
+    pub fn get<K>(&self, key: K) -> Result<Option<Vec<u8>>, Error>
+    where
+        K: Display,
+    {
+        self.file_path(key).read_as_vec_if_exists()
     }
 }
 
@@ -72,10 +96,25 @@ mod tests {
             .make_folder();
         let cache: SimpleFileCache = SimpleFileCache::from(folder);
         let key: &str = "Hello, World!";
-        let file_path: FilePath = cache.file_path(key).unwrap();
+        let file_path: FilePath = cache.file_path(key);
         let result: &str = file_path.as_str();
         let expected: &str =
             "/cache/folder/dffd/6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f.cache";
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn put_get() -> Result<(), Box<dyn std::error::Error>> {
+        let cache: SimpleFileCache = SimpleFileCache::temp()?;
+        assert_eq!(cache.get("key")?, None);
+
+        cache.put("key", "data")?;
+        let result: Option<Vec<u8>> = cache.get("key")?;
+        assert!(result.is_some());
+
+        let result: String = String::from_utf8(result.unwrap())?;
+        assert_eq!(result, "data");
+
+        Ok(())
     }
 }
