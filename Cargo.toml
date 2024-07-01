@@ -8,3 +8,8 @@ homepage = "https://github.com/nikdeapen/address"
 authors = ["Nik Deapen <nik@deapen.com>"]
 edition = "2021"
 license = "MIT"
+
+[dependencies]
+file-storage = { git = "https://github.com/nikdeapen/file-storage", features = ["local"] }
+enc = { git = "https://github.com/nikdeapen/enc", features = ["hex"] }
+sha2 = "0.10.8"
