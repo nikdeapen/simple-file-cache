@@ -1,10 +1,10 @@
 [package]
-name = "address"
+name = "simple-file-cache"
 version = "0.0.0"
-description = "This library aids in processing network addresses."
+description = "This library implements a simple file cache."
 readme = "README.md"
-repository = "https://github.com/nikdeapen/address"
-homepage = "https://github.com/nikdeapen/address"
+repository = "https://github.com/nikdeapen/simple-file-cache"
+homepage = "https://github.com/nikdeapen/simple-file-cache"
 authors = ["Nik Deapen <nik@deapen.com>"]
 edition = "2021"
 license = "MIT"
